@@ -2,33 +2,71 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Corrida - Login</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Corrida</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
-body{background:#0f172a;color:white;font-family:system-ui;margin:0}
-.card{background:#1f2937;padding:22px;margin:60px auto;width:min(420px,92vw);border-radius:14px}
-input{width:100%;padding:12px;margin-top:10px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:white;box-sizing:border-box}
-button{padding:12px 14px;margin-top:12px;border-radius:10px;border:none;font-weight:800}
-.primary{background:#16a34a;color:white}
-.secondary{background:#334155;color:white}
-#msg{margin-top:12px;white-space:pre-wrap;opacity:.9}
-.small{opacity:.75;font-size:12px}
+  body{margin:0;font-family:system-ui;background:#0f172a;color:white}
+  header{padding:14px 12px;font-size:20px;font-weight:900;text-align:center;position:sticky;top:0;background:#0b1220}
+  .card{background:#1f2937;padding:14px;margin:10px;border-radius:14px}
+  input{padding:12px;border-radius:12px;border:1px solid #334155;background:#0b1220;color:white;width:100%;box-sizing:border-box;margin-top:10px}
+  button{padding:12px 14px;margin-top:12px;border:0;border-radius:12px;font-weight:900}
+  .primary{background:#16a34a;color:white}
+  .secondary{background:#334155;color:white}
+  .danger{background:#dc2626;color:white}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .stats{display:flex;justify-content:space-around;background:#111827;padding:10px;gap:8px;flex-wrap:wrap;border-radius:14px;margin:10px}
+  .stats div{min-width:110px;text-align:center}
+  #map{height:48vh;border-radius:14px;margin:10px;overflow:hidden}
+  .muted{opacity:.8;font-size:12px}
 </style>
 </head>
 <body>
-<div class="card">
-  <h2>Login / Cadastro (V7)</h2>
-  <div class="small">✅ Hash PBKDF2 (sem bcrypt / sem limite)</div>
-  <input id="email" placeholder="Email" type="email" autocomplete="email">
-  <input id="password" type="password" placeholder="Senha (mín. 6)" autocomplete="current-password">
-  <input id="name" placeholder="Nome (cadastro)" autocomplete="name">
-  <div style="display:flex;gap:10px;flex-wrap:wrap">
-    <button class="primary" onclick="login()">Login</button>
-    <button class="secondary" onclick="registerUser()">Cadastrar</button>
+<header>🏃 Corrida</header>
+
+<div id="auth" class="card">
+  <div style="font-weight:900;font-size:18px;">Entrar</div>
+  <input id="email" placeholder="Email" type="email" autocomplete="email"/>
+  <input id="password" placeholder="Senha (mín. 6)" type="password" autocomplete="current-password"/>
+  <input id="name" placeholder="Nome (só no cadastro)" autocomplete="name"/>
+  <div class="row">
+    <button class="primary" onclick="doLogin()">Login</button>
+    <button class="secondary" onclick="doRegister()">Cadastrar</button>
     <button class="secondary" onclick="health()">Testar servidor</button>
   </div>
-  <div id="msg" class="small"></div>
+  <div class="muted" id="authMsg" style="margin-top:10px;white-space:pre-wrap;"></div>
 </div>
-<script src="/static/app.js?v=9"></script>
+
+<div id="app" style="display:none;">
+  <div class="card">
+    <div style="font-weight:900;">Olá, <span id="who">—</span></div>
+    <div class="muted">Dica: no iPhone, permita localização. Use no Safari/HTTPS.</div>
+    <div class="row">
+      <button class="secondary" onclick="logout()">Sair</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div>Tempo<br><span id="time">0:00</span></div>
+    <div>Km<br><span id="km">0.00</span></div>
+    <div>Ritmo<br><span id="pace">--</span></div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <button class="primary" onclick="startRun()">Iniciar</button>
+      <button class="danger" onclick="finishRun()">Finalizar</button>
+      <button class="secondary" onclick="loadRuns()">Histórico</button>
+      <button class="secondary" onclick="loadRanking()">Ranking</button>
+    </div>
+    <div class="muted" id="runMsg" style="margin-top:10px;white-space:pre-wrap;"></div>
+  </div>
+
+  <div id="map"></div>
+  <div id="output" class="card" style="display:none;"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="/static/app.js?v=10"></script>
 </body>
 </html>
