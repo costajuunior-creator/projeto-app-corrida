@@ -1,23 +1,26 @@
 import os
 import sqlite3
 import hashlib
+import hmac
+import secrets
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr
 from uuid import uuid4
-from passlib.context import CryptContext
-from jose import jwt, JWTError
+from jose import jwt
 from datetime import datetime, timedelta
 
-# Render: /tmp is writable. Override with DB_PATH env if desired.
+# Render: /tmp is writable
 DB = os.getenv("DB_PATH", "/tmp/corrida.db")
 
 JWT_SECRET = os.getenv("JWT_SECRET", "TROQUE_ESSA_CHAVE_NO_RENDER")
 JWT_ALG = "HS256"
 JWT_EXPIRES_HOURS = 24 * 30
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing (PBKDF2-HMAC-SHA256)
+PBKDF2_ITERS = int(os.getenv("PBKDF2_ITERS", "210000"))  # modern default
+SALT_BYTES = 16
 
 def db():
     conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
@@ -31,7 +34,9 @@ def init_db():
     c.execute("""CREATE TABLE IF NOT EXISTS users(
       id TEXT PRIMARY KEY,
       email TEXT UNIQUE,
-      password_hash TEXT,
+      pw_algo TEXT,
+      pw_salt TEXT,
+      pw_hash TEXT,
       name TEXT
     )""")
     conn.commit()
@@ -42,13 +47,21 @@ def create_token(user_id: str) -> str:
     payload = {"sub": user_id, "exp": exp}
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
 
-def pw_fingerprint(pw: str) -> str:
-    """
-    ✅ Fix definitivo do limite de 72 bytes do bcrypt:
-    - converte senha em um digest SHA-256 (64 hex chars)
-    - depois aplica bcrypt nesse digest (tamanho fixo)
-    """
-    return hashlib.sha256(pw.encode("utf-8")).hexdigest()
+def pbkdf2_hash(password: str, salt: bytes) -> bytes:
+    return hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, PBKDF2_ITERS, dklen=32)
+
+def make_password_record(password: str) -> tuple[str, str, str]:
+    salt = secrets.token_bytes(SALT_BYTES)
+    digest = pbkdf2_hash(password, salt)
+    return ("pbkdf2_sha256", salt.hex(), digest.hex())
+
+def verify_password(password: str, algo: str, salt_hex: str, hash_hex: str) -> bool:
+    if algo != "pbkdf2_sha256":
+        return False
+    salt = bytes.fromhex(salt_hex)
+    expected = bytes.fromhex(hash_hex)
+    got = pbkdf2_hash(password, salt)
+    return hmac.compare_digest(got, expected)
 
 class RegisterIn(BaseModel):
     email: EmailStr
@@ -83,7 +96,7 @@ def health():
         conn = db()
         conn.execute("SELECT 1").fetchone()
         conn.close()
-        return {"ok": True, "db": DB}
+        return {"ok": True, "db": DB, "hash": "pbkdf2_sha256", "iters": PBKDF2_ITERS}
     except Exception as e:
         return JSONResponse(status_code=500, content={"ok": False, "db": DB, "message": str(e)})
 
@@ -94,14 +107,14 @@ def register(body: RegisterIn):
     if not body.name.strip():
         raise HTTPException(status_code=400, detail="Nome é obrigatório")
 
-    digest = pw_fingerprint(body.password)
+    algo, salt_hex, hash_hex = make_password_record(body.password)
 
     conn = db()
     c = conn.cursor()
     try:
         c.execute(
-            "INSERT INTO users(id,email,password_hash,name) VALUES(?,?,?,?)",
-            (str(uuid4()), body.email.lower(), pwd_context.hash(digest), body.name.strip()),
+            "INSERT INTO users(id,email,pw_algo,pw_salt,pw_hash,name) VALUES(?,?,?,?,?,?)",
+            (str(uuid4()), body.email.lower(), algo, salt_hex, hash_hex, body.name.strip()),
         )
         conn.commit()
     except sqlite3.IntegrityError:
@@ -116,7 +129,7 @@ def login(body: LoginIn):
     conn = db()
     c = conn.cursor()
     row = c.execute(
-        "SELECT id, password_hash, name FROM users WHERE email=?",
+        "SELECT id, pw_algo, pw_salt, pw_hash, name FROM users WHERE email=?",
         (body.email.lower(),),
     ).fetchone()
     conn.close()
@@ -124,8 +137,7 @@ def login(body: LoginIn):
     if not row:
         raise HTTPException(status_code=401, detail="Email ou senha inválidos")
 
-    digest = pw_fingerprint(body.password)
-    if not pwd_context.verify(digest, row["password_hash"]):
+    if not verify_password(body.password, row["pw_algo"], row["pw_salt"], row["pw_hash"]):
         raise HTTPException(status_code=401, detail="Email ou senha inválidos")
 
     token = create_token(row["id"])

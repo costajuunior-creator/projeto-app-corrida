@@ -44,13 +44,11 @@ async function registerUser(){
   });
 
   const parsed = await readJsonOrText(res);
-
   if(!res.ok){
     showMsg(parseError(parsed, res.status));
     return;
   }
-
-  showMsg((parsed.kind==="json" && parsed.data.message) ? parsed.data.message : "Cadastro realizado! Agora faça login.");
+  showMsg((parsed.kind==="json" && parsed.data.message) ? parsed.data.message : "Cadastro realizado!");
 }
 
 async function login(){
@@ -66,15 +64,13 @@ async function login(){
   });
 
   const parsed = await readJsonOrText(res);
-
   if(!res.ok){
     showMsg(parseError(parsed, res.status));
     return;
   }
-
   if(parsed.kind==="json"){
     showMsg("Login OK!\nBem-vindo, " + (parsed.data.name || ""));
   } else {
-    showMsg("Login OK (resposta não-JSON).");
+    showMsg("Login OK!");
   }
 }
