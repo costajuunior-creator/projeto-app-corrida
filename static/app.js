@@ -10,6 +10,7 @@ async function api(url, options = {}){
 }
 
 async function boot(){
+  token = localStorage.getItem("token");
   if(!token) return;
   show("auth", false);
   show("app", true);
@@ -67,6 +68,7 @@ async function doLogin(){
   location.reload();
 }
 
+// MAPA + GPS
 let map = L.map('map').setView([0,0], 2);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 let poly = L.polyline([], {color:'lime'}).addTo(map);

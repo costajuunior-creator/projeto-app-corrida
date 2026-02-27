@@ -1,12 +1,63 @@
 <!doctype html>
-<html>
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Corrida App</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Corrida (Login + GPS)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<style>
+  body{margin:0;font-family:system-ui;background:#0f172a;color:white}
+  header{padding:12px;font-size:20px;font-weight:800;text-align:center}
+  .card{background:#1f2937;padding:12px;margin:10px;border-radius:12px}
+  input{padding:10px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:white;width:100%;box-sizing:border-box;margin-top:8px}
+  button{padding:10px 14px;margin-top:10px;border:0;border-radius:10px;font-weight:800}
+  .primary{background:#16a34a;color:white}
+  .secondary{background:#334155;color:white}
+  .danger{background:#dc2626;color:white}
+  .stats{display:flex;justify-content:space-around;background:#111827;padding:10px;gap:8px;flex-wrap:wrap}
+  .stats div{min-width:110px;text-align:center}
+  #map{height:45vh}
+  .muted{opacity:.8;font-size:12px}
+</style>
 </head>
 <body>
-<h1>App Corrida com Login funcionando</h1>
-<p>Se você está vendo isso, o deploy funcionou.</p>
+<header>🏃 Corrida</header>
+
+<div id="auth" class="card">
+  <div style="font-weight:800;">Entrar</div>
+  <input id="email" placeholder="Email" type="email" autocomplete="email"/>
+  <input id="password" placeholder="Senha (mín. 6)" type="password" autocomplete="current-password"/>
+  <input id="name" placeholder="Nome (só no cadastro)" autocomplete="name"/>
+  <button class="primary" onclick="doLogin()">Login</button>
+  <button class="secondary" onclick="doRegister()">Cadastrar</button>
+  <div class="muted" id="authMsg" style="margin-top:8px;"></div>
+</div>
+
+<div id="app" style="display:none;">
+  <div class="card">
+    <div style="font-weight:800;">Olá, <span id="who">—</span></div>
+    <div class="muted">No iPhone: permita localização e deixe o app aberto pra estabilizar o GPS.</div>
+    <button class="secondary" onclick="logout()">Sair</button>
+  </div>
+
+  <div class="stats">
+    <div>Tempo<br><span id="time">0:00</span></div>
+    <div>Km<br><span id="km">0.00</span></div>
+    <div>Ritmo<br><span id="pace">--</span></div>
+  </div>
+
+  <div style="text-align:center;padding:10px;">
+    <button class="primary" onclick="start()">Iniciar</button>
+    <button class="danger" onclick="finish()">Finalizar</button>
+    <button class="secondary" onclick="loadRuns()">Histórico</button>
+    <button class="secondary" onclick="loadRanking()">Ranking</button>
+  </div>
+
+  <div id="map"></div>
+  <div id="output" class="card" style="display:none;"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="/static/app.js?v=3"></script>
 </body>
 </html>

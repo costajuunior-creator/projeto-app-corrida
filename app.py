@@ -15,7 +15,7 @@ DB = "corrida.db"
 
 JWT_SECRET = os.getenv("JWT_SECRET", "TROQUE_ESSA_CHAVE_NO_RENDER")
 JWT_ALG = "HS256"
-JWT_EXPIRES_HOURS = 24 * 30
+JWT_EXPIRES_HOURS = 24 * 30  # 30 dias
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -27,19 +27,23 @@ def db():
 def init_db():
     conn = db()
     c = conn.cursor()
-    c.execute("""CREATE TABLE IF NOT EXISTS users(
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS users(
       id TEXT PRIMARY KEY,
       email TEXT UNIQUE,
       password_hash TEXT,
       name TEXT
-    )""")
-    c.execute("""CREATE TABLE IF NOT EXISTS runs(
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS runs(
       id TEXT PRIMARY KEY,
       user_id TEXT,
       start_time INTEGER,
       duration_ms INTEGER,
       distance_m REAL
-    )""")
+    )
+    """)
     conn.commit()
     conn.close()
 
@@ -126,10 +130,8 @@ def register(body: RegisterIn):
 def login(body: LoginIn):
     conn = db()
     c = conn.cursor()
-    row = c.execute(
-        "SELECT id, password_hash, name FROM users WHERE email=?",
-        (body.email.lower(),)
-    ).fetchone()
+    row = c.execute("SELECT id, password_hash, name FROM users WHERE email=?",
+                    (body.email.lower(),)).fetchone()
     conn.close()
 
     if not row or not pwd_context.verify(body.password, row["password_hash"]):
@@ -137,3 +139,71 @@ def login(body: LoginIn):
 
     token = create_token(row["id"])
     return {"ok": True, "token": token, "name": row["name"]}
+
+@app.get("/api/me")
+def me(authorization: Optional[str] = Header(default=None)):
+    user_id = get_user_id_from_auth(authorization)
+    conn = db()
+    c = conn.cursor()
+    row = c.execute("SELECT id, email, name FROM users WHERE id=?", (user_id,)).fetchone()
+    conn.close()
+    return dict(row) if row else {"id": user_id}
+
+@app.post("/api/runs")
+def save_run(body: RunIn, authorization: Optional[str] = Header(default=None)):
+    user_id = get_user_id_from_auth(authorization)
+
+    pts = []
+    for p in body.points:
+        if p.acc is not None and p.acc > 60:
+            continue
+        pts.append({"lat": p.lat, "lng": p.lng})
+
+    if len(pts) < 2:
+        raise HTTPException(status_code=400, detail="Poucos pontos de GPS")
+
+    dist = 0.0
+    for i in range(1, len(pts)):
+        dist += haversine_m(pts[i-1], pts[i])
+
+    duration = max(0, body.end_time - body.start_time)
+
+    conn = db()
+    c = conn.cursor()
+    c.execute(
+        "INSERT INTO runs(id,user_id,start_time,duration_ms,distance_m) VALUES(?,?,?,?,?)",
+        (str(uuid4()), user_id, body.start_time, duration, dist)
+    )
+    conn.commit()
+    conn.close()
+
+    return {"ok": True, "distance_m": dist, "duration_ms": duration}
+
+@app.get("/api/runs")
+def list_runs(authorization: Optional[str] = Header(default=None)):
+    user_id = get_user_id_from_auth(authorization)
+    conn = db()
+    c = conn.cursor()
+    rows = c.execute("""
+      SELECT id, start_time, duration_ms, distance_m
+      FROM runs
+      WHERE user_id=?
+      ORDER BY start_time DESC
+    """, (user_id,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+@app.get("/api/ranking")
+def ranking():
+    conn = db()
+    c = conn.cursor()
+    rows = c.execute("""
+      SELECT u.name as name, SUM(r.distance_m) as total_m
+      FROM runs r
+      JOIN users u ON u.id = r.user_id
+      GROUP BY r.user_id
+      ORDER BY total_m DESC
+      LIMIT 50
+    """).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
