@@ -50,11 +50,7 @@ async function registerUser(){
     return;
   }
 
-  if(parsed.kind === "json"){
-    showMsg(parsed.data.message || "Cadastro realizado! Agora faça login.");
-  } else {
-    showMsg("Cadastro OK, mas resposta não-JSON:\n" + parsed.data);
-  }
+  showMsg((parsed.kind==="json" && parsed.data.message) ? parsed.data.message : "Cadastro realizado! Agora faça login.");
 }
 
 async function login(){
@@ -76,9 +72,9 @@ async function login(){
     return;
   }
 
-  if(parsed.kind === "json"){
-    showMsg("Login OK! Token recebido.\nBem-vindo, " + (parsed.data.name || ""));
+  if(parsed.kind==="json"){
+    showMsg("Login OK!\nBem-vindo, " + (parsed.data.name || ""));
   } else {
-    showMsg("Login OK, mas resposta não-JSON:\n" + parsed.data);
+    showMsg("Login OK (resposta não-JSON).");
   }
 }

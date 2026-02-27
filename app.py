@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import hashlib
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -9,7 +10,7 @@ from passlib.context import CryptContext
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
 
-# Render: /tmp is writable. You can override with DB_PATH env.
+# Render: /tmp is writable. Override with DB_PATH env if desired.
 DB = os.getenv("DB_PATH", "/tmp/corrida.db")
 
 JWT_SECRET = os.getenv("JWT_SECRET", "TROQUE_ESSA_CHAVE_NO_RENDER")
@@ -41,11 +42,13 @@ def create_token(user_id: str) -> str:
     payload = {"sub": user_id, "exp": exp}
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
 
-def safe_pw(pw: str) -> str:
-    # bcrypt limitation: 72 bytes. Keep it simple: truncate to 72 chars.
-    # (For full correctness with unicode bytes, we'd encode to utf-8 and slice bytes,
-    # but this is good for most cases and avoids the runtime error.)
-    return pw[:72]
+def pw_fingerprint(pw: str) -> str:
+    """
+    ✅ Fix definitivo do limite de 72 bytes do bcrypt:
+    - converte senha em um digest SHA-256 (64 hex chars)
+    - depois aplica bcrypt nesse digest (tamanho fixo)
+    """
+    return hashlib.sha256(pw.encode("utf-8")).hexdigest()
 
 class RegisterIn(BaseModel):
     email: EmailStr
@@ -88,17 +91,17 @@ def health():
 def register(body: RegisterIn):
     if len(body.password) < 6:
         raise HTTPException(status_code=400, detail="Senha mínima 6 caracteres")
-    if len(body.password) > 72:
-        raise HTTPException(status_code=400, detail="Senha muito longa (máx 72 caracteres)")
     if not body.name.strip():
         raise HTTPException(status_code=400, detail="Nome é obrigatório")
+
+    digest = pw_fingerprint(body.password)
 
     conn = db()
     c = conn.cursor()
     try:
         c.execute(
             "INSERT INTO users(id,email,password_hash,name) VALUES(?,?,?,?)",
-            (str(uuid4()), body.email.lower(), pwd_context.hash(safe_pw(body.password)), body.name.strip()),
+            (str(uuid4()), body.email.lower(), pwd_context.hash(digest), body.name.strip()),
         )
         conn.commit()
     except sqlite3.IntegrityError:
@@ -118,7 +121,11 @@ def login(body: LoginIn):
     ).fetchone()
     conn.close()
 
-    if not row or not pwd_context.verify(safe_pw(body.password), row["password_hash"]):
+    if not row:
+        raise HTTPException(status_code=401, detail="Email ou senha inválidos")
+
+    digest = pw_fingerprint(body.password)
+    if not pwd_context.verify(digest, row["password_hash"]):
         raise HTTPException(status_code=401, detail="Email ou senha inválidos")
 
     token = create_token(row["id"])
