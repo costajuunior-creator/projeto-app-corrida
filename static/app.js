@@ -2,20 +2,40 @@ function showMsg(text){
   document.getElementById("msg").innerText = text;
 }
 
-function parseError(data){
-  if(!data) return "Erro";
-  if(typeof data === "string") return data;
-  if(typeof data.detail === "string") return data.detail;
-  if(Array.isArray(data.detail)){
-    return data.detail.map(d => d.msg || JSON.stringify(d)).join(" | ");
-  }
-  try { return JSON.stringify(data); } catch(e){ return "Erro"; }
+async function readJsonOrText(res){
+  const txt = await res.text();
+  try { return {kind:"json", data: JSON.parse(txt), raw: txt}; }
+  catch(e){ return {kind:"text", data: txt, raw: txt}; }
 }
 
-async function register(){
-  const email = document.getElementById("email").value;
+function parseError(parsed, status){
+  if(parsed.kind === "json"){
+    const data = parsed.data || {};
+    if(typeof data.detail === "string") return data.detail;
+    if(Array.isArray(data.detail)) return data.detail.map(d => d.msg || JSON.stringify(d)).join(" | ");
+    if(typeof data.message === "string") return data.message;
+    return JSON.stringify(data);
+  }
+  return `HTTP ${status}\n` + (parsed.data || "(sem resposta)");
+}
+
+async function health(){
+  showMsg("Testando servidor...");
+  const res = await fetch("/api/health");
+  const parsed = await readJsonOrText(res);
+  if(res.ok){
+    showMsg("OK: " + (parsed.kind==="json" ? JSON.stringify(parsed.data) : parsed.data));
+  } else {
+    showMsg(parseError(parsed, res.status));
+  }
+}
+
+async function registerUser(){
+  const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
-  const name = document.getElementById("name").value;
+  const name = document.getElementById("name").value.trim();
+
+  showMsg("Cadastrando...");
 
   const res = await fetch("/api/register",{
     method:"POST",
@@ -23,18 +43,25 @@ async function register(){
     body: JSON.stringify({email,password,name})
   });
 
-  const data = await res.json().catch(()=>({}));
+  const parsed = await readJsonOrText(res);
+
   if(!res.ok){
-    showMsg(parseError(data));
+    showMsg(parseError(parsed, res.status));
     return;
   }
 
-  showMsg("Cadastro realizado! Agora faça login.");
+  if(parsed.kind === "json"){
+    showMsg(parsed.data.message || "Cadastro realizado! Agora faça login.");
+  } else {
+    showMsg("Cadastro OK, mas resposta não-JSON:\n" + parsed.data);
+  }
 }
 
 async function login(){
-  const email = document.getElementById("email").value;
+  const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
+
+  showMsg("Entrando...");
 
   const res = await fetch("/api/login",{
     method:"POST",
@@ -42,11 +69,16 @@ async function login(){
     body: JSON.stringify({email,password})
   });
 
-  const data = await res.json().catch(()=>({}));
+  const parsed = await readJsonOrText(res);
+
   if(!res.ok){
-    showMsg(parseError(data));
+    showMsg(parseError(parsed, res.status));
     return;
   }
 
-  showMsg("Login realizado com sucesso!");
+  if(parsed.kind === "json"){
+    showMsg("Login OK! Token recebido.\nBem-vindo, " + (parsed.data.name || ""));
+  } else {
+    showMsg("Login OK, mas resposta não-JSON:\n" + parsed.data);
+  }
 }

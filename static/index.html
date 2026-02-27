@@ -1,28 +1,33 @@
 <!doctype html>
-<html>
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Corrida App</title>
+<title>Corrida - Login</title>
 <style>
-body{background:#0f172a;color:white;font-family:system-ui}
-.card{background:#1f2937;padding:20px;margin:40px auto;width:350px;border-radius:12px}
-input{width:100%;padding:10px;margin-top:10px;border-radius:8px;border:none}
-button{padding:10px;margin-top:10px;border-radius:8px;border:none;font-weight:bold}
+body{background:#0f172a;color:white;font-family:system-ui;margin:0}
+.card{background:#1f2937;padding:22px;margin:60px auto;width:min(420px,92vw);border-radius:14px}
+input{width:100%;padding:12px;margin-top:10px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:white;box-sizing:border-box}
+button{padding:12px 14px;margin-top:12px;border-radius:10px;border:none;font-weight:800}
 .primary{background:#16a34a;color:white}
 .secondary{background:#334155;color:white}
+#msg{margin-top:12px;white-space:pre-wrap;opacity:.9}
+.small{opacity:.75;font-size:12px}
 </style>
 </head>
 <body>
 <div class="card">
-<h2>Login / Cadastro</h2>
-<input id="email" placeholder="Email">
-<input id="password" type="password" placeholder="Senha (mín. 6)">
-<input id="name" placeholder="Nome (cadastro)">
-<button class="primary" onclick="login()">Login</button>
-<button class="secondary" onclick="register()">Cadastrar</button>
-<p id="msg"></p>
+  <h2>Login / Cadastro</h2>
+  <input id="email" placeholder="Email" type="email" autocomplete="email">
+  <input id="password" type="password" placeholder="Senha (mín. 6)" autocomplete="current-password">
+  <input id="name" placeholder="Nome (cadastro)" autocomplete="name">
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="primary" onclick="login()">Login</button>
+    <button class="secondary" onclick="registerUser()">Cadastrar</button>
+    <button class="secondary" onclick="health()">Testar servidor</button>
+  </div>
+  <div id="msg" class="small"></div>
 </div>
-<script src="/static/app.js?v=5"></script>
+<script src="/static/app.js?v=6"></script>
 </body>
 </html>
