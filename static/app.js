@@ -2,12 +2,33 @@
 let map, poly, points=[], watchId=null, startTime=null;
 
 function initMap(){
-  map = L.map('map').setView([-15.78,-47.93],4);
+  map=L.map('map').setView([-15.78,-47.93],4);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-  poly = L.polyline([], {color:'lime'}).addTo(map);
-  setTimeout(()=>{ map.invalidateSize(); },400);
+  poly=L.polyline([], {color:'lime'}).addTo(map);
+  setTimeout(()=>map.invalidateSize(),400);
 }
 initMap();
+
+async function register(){
+  await fetch("/api/register",{method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      email:email.value,
+      password:password.value,
+      name:name.value})});
+  alert("Cadastrado");
+}
+
+async function login(){
+  let res=await fetch("/api/login",{method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      email:email.value,
+      password:password.value})});
+  let data=await res.json();
+  localStorage.setItem("token",data.token);
+  alert("Login OK");
+}
 
 function startRun(){
   points=[]; poly.setLatLngs([]);
@@ -22,8 +43,7 @@ function startRun(){
 }
 
 async function finishRun(){
-  if(watchId) navigator.geolocation.clearWatch(watchId);
-  if(points.length<2) return alert("Poucos pontos");
+  navigator.geolocation.clearWatch(watchId);
   await fetch("/api/runs",{
     method:"POST",
     headers:{
@@ -36,5 +56,18 @@ async function finishRun(){
       points
     })
   });
-  alert("Corrida salva");
+  alert("Salvo");
+}
+
+async function loadRuns(){
+  let res=await fetch("/api/runs",{
+    headers:{Authorization:"Bearer "+localStorage.getItem("token")}});
+  let data=await res.json();
+  output.innerText=JSON.stringify(data,null,2);
+}
+
+async function loadRanking(){
+  let res=await fetch("/api/ranking");
+  let data=await res.json();
+  output.innerText=JSON.stringify(data,null,2);
 }

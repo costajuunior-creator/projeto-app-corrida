@@ -6,14 +6,31 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
 body{margin:0;background:#0f172a;color:white;font-family:sans-serif}
-#map{height:60vh}
-button{padding:12px;margin:6px}
+.card{padding:15px}
+#map{height:50vh}
+button{padding:10px;margin:5px}
 </style>
 </head>
 <body>
+
+<div class="card">
+<input id="email" placeholder="email">
+<input id="password" placeholder="senha" type="password">
+<input id="name" placeholder="nome">
+<button onclick="register()">Cadastrar</button>
+<button onclick="login()">Login</button>
+</div>
+
+<div class="card">
 <button onclick="startRun()">Iniciar</button>
 <button onclick="finishRun()">Finalizar</button>
+<button onclick="loadRuns()">Histórico</button>
+<button onclick="loadRanking()">Ranking</button>
+</div>
+
 <div id="map"></div>
+<div id="output" class="card"></div>
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="/static/app.js"></script>
 </body>

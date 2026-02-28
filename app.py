@@ -123,3 +123,23 @@ def save_run(body: Run, authorization: Optional[str]=Header(None)):
         (str(uuid4()),uid,body.start_time,duration,dist))
     conn.commit(); conn.close()
     return {"distance_m":dist,"duration_ms":duration}
+
+@app.get("/api/runs")
+def list_runs(authorization: Optional[str]=Header(None)):
+    uid=get_uid(authorization)
+    conn=db(); c=conn.cursor()
+    rows=c.execute("SELECT * FROM runs WHERE user_id=? ORDER BY start_time DESC",(uid,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+@app.get("/api/ranking")
+def ranking():
+    conn=db(); c=conn.cursor()
+    rows=c.execute("""
+        SELECT u.name, SUM(r.distance_m) as total_m
+        FROM runs r JOIN users u ON u.id=r.user_id
+        GROUP BY r.user_id
+        ORDER BY total_m DESC
+    """).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
