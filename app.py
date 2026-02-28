@@ -53,7 +53,7 @@ def token(uid):
 
 def get_uid(auth):
     if not auth or not auth.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Sem token")
+        raise HTTPException(status_code=401, detail="Token inválido")
     try:
         return jwt.decode(auth.split()[1], JWT_SECRET, algorithms=[JWT_ALG])["sub"]
     except JWTError:
