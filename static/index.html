@@ -5,46 +5,27 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
-body{margin:0;background:#0f172a;color:white;font-family:sans-serif}
-.header{padding:15px;font-size:20px;font-weight:bold;text-align:center}
-.card{background:#1f2937;margin:10px;padding:15px;border-radius:12px}
-input{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none}
-button{padding:10px 14px;margin-top:10px;border:none;border-radius:8px;font-weight:bold}
-.primary{background:#16a34a;color:white}
-.secondary{background:#334155;color:white}
-.stats{display:flex;justify-content:space-around;margin:10px}
-#map{height:45vh;margin:10px;border-radius:12px}
+body{margin:0;background:#0f172a;color:white;font-family:sans-serif;text-align:center}
+.stats{display:flex;justify-content:space-around;margin:15px}
+#map{height:50vh;margin:10px;border-radius:15px}
+button{border:none;border-radius:50%;width:110px;height:110px;font-size:18px;font-weight:bold}
+.start{background:#16a34a;color:white}
+.stop{background:#dc2626;color:white}
 </style>
 </head>
 <body>
 
-<div class="header">🏃 Corrida</div>
+<h2>🏃 Corrida Premium</h2>
 
-<div id="loginCard" class="card">
-<input id="email" placeholder="Email">
-<input id="password" type="password" placeholder="Senha">
-<input id="name" placeholder="Nome (cadastro)">
-<button class="primary" onclick="login()">Login</button>
-<button class="secondary" onclick="register()">Cadastrar</button>
-</div>
-
-<div id="app" style="display:none;">
 <div class="stats">
 <div>Tempo<br><span id="time">0:00</span></div>
-<div>Km<br><span id="km">0.00</span></div>
+<div>Distância<br><span id="dist">0 m</span></div>
 <div>Ritmo<br><span id="pace">--</span></div>
 </div>
 
-<div class="card">
-<button class="primary" onclick="startRun()">Iniciar</button>
-<button class="secondary" onclick="finishRun()">Finalizar</button>
-<button class="secondary" onclick="loadRuns()">Histórico</button>
-<button class="secondary" onclick="loadRanking()">Ranking</button>
-</div>
+<button id="mainBtn" class="start" onclick="toggleRun()">START</button>
 
 <div id="map"></div>
-<div id="output" class="card"></div>
-</div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="/static/app.js"></script>
